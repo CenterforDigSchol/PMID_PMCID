@@ -1,3 +1,6 @@
+#install.packages("plyr")
+#install.packages("rentrez") 
+
 # 1. Load R packages (rentrez and plyr)
 
 library("rentrez")
@@ -7,12 +10,30 @@ library("plyr")
 
 # 3. Load csv file and create a data frame
 
-PMID_PMCID <- read.csv("FileName.csv", header=TRUE)
+PMID_PMCID <- read.csv("1805-3272.csv", header=TRUE)
+#remove rows with PMC in col dc.source
+PMID_PMCID <- PMID_PMCID[!(PMID_PMCID$dc.source == 'PMC'),]
+#remove rows with alternative links in col ul.alternative.fulltext
+PMID_PMCID <- PMID_PMCID[!(PMID_PMCID$ul.alternative.fulltext != ''),]
+#remove rows with alternative links in col ul.alternative.fulltext
+PMID_PMCID <- PMID_PMCID[!(PMID_PMCID$ul.alternative.fulltext[] != ''),]
+#remove rows with no DOI in col dc.relation.isversionof
+PMID_PMCID <- PMID_PMCID[!(PMID_PMCID$dc.relation.isversionof == ''),]
 
-# 4. Create two colums with empty value: One for PMID and the other for PMCID
+# 4. Create two columns with empty value: One for PMID and the other for PMCID
 
 PMID_PMCID$pmid <- " "
 PMID_PMCID$pmcid <- " "
+
+# 12:  Load csv file of items under embargo and create a data frame
+Embargo <- read.csv("ISWembargoes20180601.csv", header=TRUE)
+
+# 13: Identify items under Embargo and change column name
+items_under_embargo <- data.frame(intersect(PMID_PMCID$id, Embargo$ItemID))
+colnames(items_under_embargo) <- c("ID")
+
+# 14: Remove items under Embargo from PMID_PMCID data table
+PMID_PMCID <- subset(PMID_PMCID, !(id %in% items_under_embargo$ID), select=id:pmcid)
 
 # 5. Function to get Pubmed ID
 
@@ -88,16 +109,6 @@ PMID_PMCID <- PMID_PMCID[ which(PMID_PMCID$pmid != "None"), ]
 # 11: Delete all rows with PMCID value not None
 PMID_PMCID <- PMID_PMCID[ which(PMID_PMCID$pmcid=="None"), ]
 
-# 12:  Load csv file of items under embargo and create a data frame
-Embargo <- read.csv("FileName.csv", header=TRUE)
-
-# 13: Identify items under Embargo and change column name
-items_under_embargo <- data.frame(intersect(PMID_PMCID$id, Embargo$ItemID))
-colnames(items_under_embargo) <- c("ID")
-
-# 14: Remove items under Embargo from PMID_PMCID data table
-PMID_PMCID <- subset(PMID_PMCID, !(id %in% items_under_embargo$ID), select=id:pmcid)
-
 # 15: Final Report
 PMID_PMCID$ProviderID <- "YourID"
 PMID_PMCID$Database <- "PubMed"
@@ -126,4 +137,3 @@ Removed_under_indefinite_embargo <- All_Embargo[ which(All_Embargo$Embargo!="999
 
 # 20: Save the file of items under definite embargo
 write.table(Removed_under_indefinite_embargo, file="ItemsUnderEmbargo.csv", sep=",", row.names=F)
-
